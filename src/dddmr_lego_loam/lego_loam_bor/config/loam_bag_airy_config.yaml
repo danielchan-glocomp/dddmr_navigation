@@ -9,13 +9,13 @@ bag_reader:
 lego_loam_ip:
   ros__parameters:
     use_sim_time: true
-    # leishen16
     laser:
         odom_type: "laser_odometry"         #wheel_odometry/laser_odometry 
         baselink_frame: "base_link"
-        num_vertical_scans: 96
-        num_horizontal_scans: 900
-        ground_scan_index: 48
+        #projection is at sensor frame after tilted
+        num_vertical_scans: 192
+        num_horizontal_scans: 450
+        ground_scan_index: 60
         vertical_angle_bottom: -90.0          # degrees
         vertical_angle_top: 90.0            # degrees
         scan_period: 0.1                   # seconds

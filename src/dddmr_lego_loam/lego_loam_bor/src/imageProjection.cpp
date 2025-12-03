@@ -389,7 +389,7 @@ void ImageProjection::projectPointCloud() {
     float verticalAngle = std::asin(thisPoint.z / range);
         //std::atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y));
 
-    int rowIdn = (verticalAngle + _ang_bottom + _sensor_mount_angle) / _ang_resolution_Y;
+    int rowIdn = (verticalAngle + _ang_bottom) / _ang_resolution_Y;
     if (rowIdn < 0 || rowIdn >= _vertical_scans) {
       continue;
     }
