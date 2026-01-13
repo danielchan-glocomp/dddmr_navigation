@@ -164,7 +164,7 @@ void MultiLayerSpinningLidar::onInitialize()
 
   pub_casting_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(pre_topic_name + "/tracing_objects", 2);
 
-  pct_marking_ = std::make_shared<Marking>(&dGraph_, 
+  pct_marking_ = std::make_shared<Marking>(name_, &dGraph_, 
         gbl_utils_->getInscribedRadius(), gbl_utils_->getInflationRadius(), shared_data_, resolution_, height_resolution_);
   get_first_tf_ = false;
   
@@ -309,8 +309,15 @@ void MultiLayerSpinningLidar::selfMark(){
 
   if(is_local_planner_){return;}
 
-  if(!get_first_tf_ || !shared_data_->is_static_layer_ready_)
+  if(! get_first_tf_){
+    RCLCPP_INFO_THROTTLE(node_->get_logger().get_child(name_), *clock_, 1, "Wait for TF between global frame to sensor, either your TF tree is corrupted or your sensor did not send any msg to topic: %s", topic_.c_str());
     return;
+  }
+    
+  if(! shared_data_->is_static_layer_ready_){
+    RCLCPP_INFO_THROTTLE(node_->get_logger().get_child(name_), *clock_, 1, "Wait for static layer ready.");
+    return;
+  }
 
   if(!shared_data_->isAllLayersBeenReset()){
     return;
@@ -469,8 +476,15 @@ void MultiLayerSpinningLidar::selfClear(){
 
   if(is_local_planner_){return;}
 
-  if(! get_first_tf_ || ! shared_data_->is_static_layer_ready_)
+  if(! get_first_tf_){
+    RCLCPP_INFO_THROTTLE(node_->get_logger().get_child(name_), *clock_, 1, "Wait for TF between global frame to sensor, either your TF tree is corrupted or your sensor did not send any msg to topic: %s", topic_.c_str());
     return;
+  }
+    
+  if(! shared_data_->is_static_layer_ready_){
+    RCLCPP_INFO_THROTTLE(node_->get_logger().get_child(name_), *clock_, 1, "Wait for static layer ready.");
+    return;
+  }
 
   if(shared_data_->dgraph_update_request_[name_]){
     //@ need to regenerate dynamic graph
@@ -897,7 +911,7 @@ void MultiLayerSpinningLidar::resetdGraph(){
   RCLCPP_INFO(node_->get_logger().get_child(name_), "%s starts to reset dynamic graph.", name_.c_str());
   dGraph_.clear();
   dGraph_.initial(shared_data_->static_ground_size_, gbl_utils_->getMaxObstacleDistance());
-  pct_marking_ = std::make_shared<Marking>(&dGraph_, 
+  pct_marking_ = std::make_shared<Marking>(name_, &dGraph_, 
         gbl_utils_->getInscribedRadius(), gbl_utils_->getInflationRadius(), shared_data_, resolution_, height_resolution_);
   RCLCPP_INFO(node_->get_logger().get_child(name_), "%s done dynamic graph regeneration.", name_.c_str());
 }
