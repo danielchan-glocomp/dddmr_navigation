@@ -324,6 +324,7 @@ void ImageProjection::cloudHandler(
   // Copy and remove NAN points
   pcl::fromROSMsg(*laserCloudMsg, *_laser_cloud_in);
   std::vector<int> indices;
+  _laser_cloud_in->is_dense = false;
   pcl::removeNaNFromPointCloud(*_laser_cloud_in, *_laser_cloud_in, indices);
 
   //@if not stitch, save copy time
@@ -702,7 +703,12 @@ void ImageProjection::zPitchRollFeatureRemoval() {
   dsf_patched_ground_.filter(*patched_ground_);
   dsf_patched_ground_.setInputCloud(patched_ground_edge_);
   dsf_patched_ground_.filter(*patched_ground_edge_); 
-
+  
+  patched_ground_->is_dense = false;
+  patched_ground_edge_->is_dense = false;
+  std::vector<int> tmp_indices, tmp_indices2;
+  pcl::removeNaNFromPointCloud(*patched_ground_, *patched_ground_, tmp_indices);
+  pcl::removeNaNFromPointCloud(*patched_ground_edge_, *patched_ground_edge_, tmp_indices2);
 }
 
 void ImageProjection::cloudSegmentation() {
@@ -864,7 +870,7 @@ void ImageProjection::publishClouds() {
 
   //PublishCloud(_pub_outlier_cloud, _outlier_cloud);
   //PublishCloud(_pub_segmented_cloud, _segmented_cloud);
-  PublishCloud(_pub_ground_cloud, _z_pitch_roll_decisive_feature_cloud);
+  PublishCloud(_pub_ground_cloud, patched_ground_);
   PublishCloud(_pub_segmented_cloud_pure, _segmented_cloud_pure);
   //PublishCloud(_pub_full_info_cloud, _full_info_cloud);
   if (_pub_segmented_cloud_info->get_subscription_count() != 0) {

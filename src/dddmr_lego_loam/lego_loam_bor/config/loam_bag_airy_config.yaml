@@ -1,14 +1,14 @@
 bag_reader:
   ros__parameters:
     use_sim_time: true
-    bag_file_dir: "/root/dddmr_bags/airy_home"
+    bag_file_dir: "/root/dddmr_bags/airy_stationary"
     point_cloud_topic: "/airy_points"
     odometry_topic: "/odom"
     skip_frame: 1
 
 lego_loam_ip:
   ros__parameters:
-    use_sim_time: false
+    use_sim_time: true
     laser:
         odom_type: "laser_odometry"         #wheel_odometry/laser_odometry 
         baselink_frame: "base_link"
@@ -31,7 +31,7 @@ lego_loam_ip:
         projected_image_stack_size: 1            # Stack this number of image for yolo11n to inference as time elapsed yolo (only work when TRT is loaded)
 
         ground_fov_bottom: 0.0
-        ground_fov_top: 1.2217
+        ground_fov_top: 1.39626
         ground_positive_start: 0.0
         ground_positive_stop: 1.5707
         ground_negative_start: 0.0

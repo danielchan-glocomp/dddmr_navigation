@@ -50,6 +50,8 @@ MapOptimization::MapOptimization(std::string name,
   parameters.relinearizeSkip = 1;
   isam = new ISAM2(parameters);
   pose_graph_.clear();
+  has_m2ci_af3_ = false;
+  current_ground_size_ = 0;
 
   srvSavePCD = this->create_service<std_srvs::srv::Empty>("save_mapped_point_cloud", std::bind(&MapOptimization::pcdSaver, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -811,6 +813,8 @@ void MapOptimization::copyPosesAndFrames(){
 
 void MapOptimization::publishGlobalMap() {
   
+  if(!has_m2ci_af3_) return;
+
   if (cloudKeyPoses3D->points.empty() == true) return;
 
   for (int i = 0; i < cloudKeyPoses6D_Copy->points.size(); ++i) {
@@ -819,9 +823,15 @@ void MapOptimization::publishGlobalMap() {
     *globalMapKeyFrames += *transformPointCloud(
         outlierCloudKeyFrames[i], &cloudKeyPoses6D_Copy->points[i]);
   }
-
+  globalGroundKeyFrames->is_dense = false;
+  globalMapKeyFrames->is_dense = false;
   //@ transform to map frame --> z pointing to sky
   pcl::transformPointCloud(*globalMapKeyFrames, *globalMapKeyFrames, trans_m2ci_af3_);
+
+  //@ is there is a nan in the point cloud, the voxel result will be super bad
+  std::vector<int> tmp_rm_nan;
+  pcl::removeNaNFromPointCloud(*globalGroundKeyFrames, *globalGroundKeyFrames, tmp_rm_nan);
+
   downSizeFilterGlobalMapKeyFrames.setInputCloud(globalMapKeyFrames);
   downSizeFilterGlobalMapKeyFrames.filter(*globalMapKeyFrames);
   sensor_msgs::msg::PointCloud2 cloud_msg_map;
@@ -829,7 +839,7 @@ void MapOptimization::publishGlobalMap() {
   cloud_msg_map.header.stamp = timeLaserOdometry_header_.stamp;
   cloud_msg_map.header.frame_id = "map";
   pubMap->publish(cloud_msg_map);
-  
+
   for (int i = 0; i < patchedGroundEdgeProcessedKeyFrames_Copy.size(); ++i) {
     pcl::PointCloud<PointType>::Ptr temp_frame;
     temp_frame = transformPointCloud(patchedGroundKeyFrames_Copy[i], &cloudKeyPoses6D_Copy->points[i]);
@@ -837,7 +847,7 @@ void MapOptimization::publishGlobalMap() {
     downSizeFilterGlobalGroundKeyFrames_Copy.filter(*temp_frame);
     *globalGroundKeyFrames += *temp_frame;
   }
-  
+
   for (int i = 0; i < patchedGroundEdgeProcessedKeyFrames_Copy.size(); ++i) {
     pcl::PointCloud<PointType>::Ptr temp_frame;
     temp_frame = transformPointCloud(patchedGroundEdgeProcessedKeyFrames_Copy[i], &cloudKeyPoses6D_Copy->points[i]);
@@ -845,12 +855,20 @@ void MapOptimization::publishGlobalMap() {
     downSizeFilterGlobalGroundKeyFrames_Copy.filter(*temp_frame);
     *globalGroundKeyFrames += *temp_frame;
   }
-  
+
   std::lock_guard<std::mutex> lock(mtx);
   //@ transform to map frame --> z pointing to sky
   pcl::transformPointCloud(*globalGroundKeyFrames, *globalGroundKeyFrames, trans_m2ci_af3_);
+
+  //@ is there is a nan in the point cloud, the voxel result will be super bad
+  std::vector<int> tmp_rm_nan2;
+  pcl::removeNaNFromPointCloud(*globalGroundKeyFrames, *globalGroundKeyFrames, tmp_rm_nan2);
+
   downSizeFilterGlobalGroundKeyFrames_Copy.setInputCloud(globalGroundKeyFrames);
   downSizeFilterGlobalGroundKeyFrames_Copy.filter(*globalGroundKeyFrames);
+  
+  current_ground_size_ = globalGroundKeyFrames->points.size();
+
   sensor_msgs::msg::PointCloud2 cloud_msg_ground;
   pcl::toROSMsg(*globalGroundKeyFrames, cloud_msg_ground);
   cloud_msg_ground.header.stamp = timeLaserOdometry_header_.stamp;
@@ -1791,6 +1809,10 @@ void MapOptimization::saveKeyFramesAndFactor() {
                fabs(previousRobotPos_.yaw - currentRobotPos_.yaw) < angle_between_key_frame_) {
     saveThisKeyFrame = false;
   }
+  
+  if(current_ground_size_<100 && cloudKeyPoses3D->points.size()<10){
+    saveThisKeyFrame = true;
+  }
 
   if (saveThisKeyFrame == false && !cloudKeyPoses3D->points.empty()) return;
 
@@ -2039,7 +2061,7 @@ void MapOptimization::run() {
   trans_m2ci_af3_ = tf2::transformToEigen(association.trans_m2ci); //for pcl conversion
   tf2_trans_m2ci_.setRotation(tf2::Quaternion(association.trans_m2ci.transform.rotation.x, association.trans_m2ci.transform.rotation.y, association.trans_m2ci.transform.rotation.z, association.trans_m2ci.transform.rotation.w));
   tf2_trans_m2ci_.setOrigin(tf2::Vector3(association.trans_m2ci.transform.translation.x, association.trans_m2ci.transform.translation.y, association.trans_m2ci.transform.translation.z));
-
+  has_m2ci_af3_ = true;
   wheelOdometry = association.wheel_odometry;
   broadcast_odom_tf_ = association.broadcast_odom_tf;
   
@@ -2090,7 +2112,7 @@ void MapOptimization::runWoLO(){
   tf2_trans_c2s_.setOrigin(tf2::Vector3(association.trans_c2s.transform.translation.x, association.trans_c2s.transform.translation.y, association.trans_c2s.transform.translation.z));
   tf2_trans_b2s_.setRotation(tf2::Quaternion(association.trans_b2s.transform.rotation.x, association.trans_b2s.transform.rotation.y, association.trans_b2s.transform.rotation.z, association.trans_b2s.transform.rotation.w));
   tf2_trans_b2s_.setOrigin(tf2::Vector3(association.trans_b2s.transform.translation.x, association.trans_b2s.transform.translation.y, association.trans_b2s.transform.translation.z));
-
+  has_m2ci_af3_ = true;
   wheelOdometry = association.wheel_odometry;
   broadcast_odom_tf_ = association.broadcast_odom_tf;
 

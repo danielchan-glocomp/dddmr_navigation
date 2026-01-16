@@ -363,7 +363,9 @@ class MapOptimization : public rclcpp::Node
 
   std::vector<bool> ground_edge_processed_;
   bool broadcast_odom_tf_;
-
+  bool has_m2ci_af3_;
+  size_t current_ground_size_;
+  
 };
 
 #endif // MAPOPTIMIZATION_H
