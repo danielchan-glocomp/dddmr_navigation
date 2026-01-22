@@ -556,8 +556,6 @@ void ImageProjection::getNoPitchPoint(PointType& pt_in, PointType& pt_out){
 
 void ImageProjection::zPitchRollFeatureRemoval() {
 
-
-
   geometry_msgs::msg::TransformStamped trans_lidar2horizontal;
   tf2::Quaternion q;
   q.setRPY( 0, sensor_install_pitch_, 0);
@@ -575,13 +573,6 @@ void ImageProjection::zPitchRollFeatureRemoval() {
   _z_pitch_roll_decisive_feature_cloud->clear();
   patched_ground_->points.clear();
   patched_ground_edge_->points.clear();
-
-  double ground_fov_bottom = -0.2618;
-  double ground_fov_top = -0.087266;
-  double ground_positive_start = 0;
-  double ground_positive_stop = 3.1415926;
-  double ground_negative_start = 0;
-  double ground_negative_stop = -3.1415926;
 
   for (size_t j = 0; j < _horizontal_scans; ++j) {
     size_t ring_edge = 0;
@@ -668,24 +659,16 @@ void ImageProjection::zPitchRollFeatureRemoval() {
         bool valid_point = false;
 
         if(j<10){
-          continue;
-          getNoPitchPoint(_full_cloud->points[lowerInd], lowerInd_pt_no_pitch);
-          getNoPitchPoint(_full_cloud->points[lowerInd+_horizontal_scans-1], lowerInd_left_pt_no_pitch);
-          getNoPitchPoint(_full_cloud->points[lowerInd+1], lowerInd_right_pt_no_pitch);
-        }
-
-        else if(j>_horizontal_scans-11){
-          continue;
-          getNoPitchPoint(_full_cloud->points[lowerInd], lowerInd_pt_no_pitch);
-          getNoPitchPoint(_full_cloud->points[lowerInd-1], lowerInd_left_pt_no_pitch);
-          getNoPitchPoint(_full_cloud->points[lowerInd], lowerInd_right_pt_no_pitch);
-        }
-        else{
-          //getNoPitchPoint(_full_cloud->points[lowerInd], lowerInd_pt_no_pitch);
           lowerInd_pt_no_pitch = _full_cloud_no_pitch[lowerInd];
           for(int jj=1;jj<10;jj++){
-            //getNoPitchPoint(_full_cloud->points[lowerInd-jj], lowerInd_left_pt_no_pitch);
-            lowerInd_left_pt_no_pitch = _full_cloud_no_pitch[lowerInd-jj];
+            size_t compensateInd = 0;
+            if(lowerInd-jj<0){
+              compensateInd = lowerInd-jj+_horizontal_scans;
+            }
+            else{
+              compensateInd = lowerInd-jj;
+            }
+            lowerInd_left_pt_no_pitch = _full_cloud_no_pitch[compensateInd];
             if(fabs(lowerInd_pt_no_pitch.y - lowerInd_left_pt_no_pitch.y)>0.05){
               valid_point = true;
               break;
@@ -693,7 +676,6 @@ void ImageProjection::zPitchRollFeatureRemoval() {
               
           }
           for(int jj=1;jj<10;jj++){
-            //getNoPitchPoint(_full_cloud->points[lowerInd+jj], lowerInd_right_pt_no_pitch);
             lowerInd_right_pt_no_pitch = _full_cloud_no_pitch[lowerInd+jj];
             if(fabs(lowerInd_pt_no_pitch.y - lowerInd_right_pt_no_pitch.y)>0.05){
               valid_point = true;
@@ -702,11 +684,53 @@ void ImageProjection::zPitchRollFeatureRemoval() {
               
           }
         }
+
+        else if(j>_horizontal_scans-11){
+          lowerInd_pt_no_pitch = _full_cloud_no_pitch[lowerInd];
+          for(int jj=1;jj<10;jj++){
+            lowerInd_left_pt_no_pitch = _full_cloud_no_pitch[lowerInd-jj];
+            if(fabs(lowerInd_pt_no_pitch.y - lowerInd_left_pt_no_pitch.y)>0.05){
+              valid_point = true;
+              break;
+            }
+          }
+          for(int jj=1;jj<10;jj++){
+            size_t compensateInd = 0;
+            if(lowerInd+jj>_horizontal_scans-1){
+              compensateInd = (lowerInd+jj) - _horizontal_scans;
+            }
+            else{
+              compensateInd = lowerInd+jj;
+            }
+            lowerInd_right_pt_no_pitch = _full_cloud_no_pitch[compensateInd];
+            if(fabs(lowerInd_pt_no_pitch.y - lowerInd_right_pt_no_pitch.y)>0.05){
+              valid_point = true;
+              break;
+            }
+          }
+        }
+        else{
+          lowerInd_pt_no_pitch = _full_cloud_no_pitch[lowerInd];
+          for(int jj=1;jj<10;jj++){
+            lowerInd_left_pt_no_pitch = _full_cloud_no_pitch[lowerInd-jj];
+            if(fabs(lowerInd_pt_no_pitch.y - lowerInd_left_pt_no_pitch.y)>0.05){
+              valid_point = true;
+              break;
+            }
+          }
+          for(int jj=1;jj<10;jj++){
+            lowerInd_right_pt_no_pitch = _full_cloud_no_pitch[lowerInd+jj];
+            if(fabs(lowerInd_pt_no_pitch.y - lowerInd_right_pt_no_pitch.y)>0.05){
+              valid_point = true;
+              break;
+            } 
+          }
+        }
         
         double dz_left = fabs(lowerInd_pt_no_pitch.z - lowerInd_left_pt_no_pitch.z);
         double dz_right = fabs(lowerInd_pt_no_pitch.z - lowerInd_right_pt_no_pitch.z);
         
-        if(!valid_point || fabs(dz_left-dz_right)>0.03){
+        if(!valid_point || fabs(dz_left-dz_right)>0.05){
           do_patch = false;
           continue;
         }
@@ -782,17 +806,18 @@ void ImageProjection::zPitchRollFeatureRemoval() {
       patched_ground_->push_back(a_ptf);
     }
   }
-  
-  dsf_patched_ground_.setInputCloud(patched_ground_);
-  dsf_patched_ground_.filter(*patched_ground_);
-  dsf_patched_ground_.setInputCloud(patched_ground_edge_);
-  dsf_patched_ground_.filter(*patched_ground_edge_); 
-  
+
   patched_ground_->is_dense = false;
   patched_ground_edge_->is_dense = false;
   std::vector<int> tmp_indices, tmp_indices2;
   pcl::removeNaNFromPointCloud(*patched_ground_, *patched_ground_, tmp_indices);
   pcl::removeNaNFromPointCloud(*patched_ground_edge_, *patched_ground_edge_, tmp_indices2);
+
+  dsf_patched_ground_.setInputCloud(patched_ground_);
+  dsf_patched_ground_.filter(*patched_ground_);
+  dsf_patched_ground_.setInputCloud(patched_ground_edge_);
+  dsf_patched_ground_.filter(*patched_ground_edge_); 
+
 }
 
 void ImageProjection::cloudSegmentation() {

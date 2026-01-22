@@ -12,7 +12,6 @@ lego_loam_ip:
     laser:
         odom_type: "laser_odometry"         #wheel_odometry/laser_odometry 
         baselink_frame: "base_link"
-        #projection is at sensor frame after tilted
         num_vertical_scans: 100
         num_horizontal_scans: 400
         vertical_angle_bottom: 0.0          # degrees
