@@ -99,13 +99,13 @@ void GenericDriveOdom::pubOdom3D(){
   odom_3d_.pose.pose.orientation.w = latest_imu_.orientation.w;
 
   odom_3d_.pose.pose.position.x += (((latest_odom_2d_.twist.twist.linear.x * cos(imu_pitch_)) * cos(imu_yaw_)) * dt_ + 
-                                    ((latest_odom_2d_.twist.twist.linear.y * cos(imu_roll_)) * cos(M_PI_2 + imu_yaw_)) * dt_);
+                                    ((latest_odom_2d_.twist.twist.linear.y * cos(imu_roll_)) * cos(1.570796327 + imu_yaw_)) * dt_);
 
   odom_3d_.pose.pose.position.y += (((latest_odom_2d_.twist.twist.linear.x * cos(imu_pitch_)) * sin(imu_yaw_)) * dt_ + 
-                                    ((latest_odom_2d_.twist.twist.linear.y * cos(imu_roll_)) * sin(M_PI_2 + imu_yaw_)) * dt_);
+                                    ((latest_odom_2d_.twist.twist.linear.y * cos(imu_roll_)) * sin(1.570796327 + imu_yaw_)) * dt_);
 
   odom_3d_.pose.pose.position.z += ((latest_odom_2d_.twist.twist.linear.x * sin(-imu_pitch_)) * dt_ + 
-                                    (latest_odom_2d_.twist.twist.linear.y * sin(-imu_roll_)) * dt_);
+                                    (latest_odom_2d_.twist.twist.linear.y * sin(imu_roll_)) * dt_);
 
   odom_3d_.twist.twist.linear.x = latest_odom_2d_.twist.twist.linear.x;
   odom_3d_.twist.twist.angular.z = latest_odom_2d_.twist.twist.angular.z;
