@@ -310,7 +310,8 @@ void FeatureAssociation::adjustDistortion() {
         ori -= 2 * M_PI;
     }
     
-    float ori2;
+    /*
+    double ori2;
     if(segmentedCloud->points[i].x<0 && segmentedCloud->points[i].y>=0){
       ori2 = -atan2(segmentedCloud->points[i].y, segmentedCloud->points[i].x) + 2 * M_PI;
     }
@@ -322,16 +323,20 @@ void FeatureAssociation::adjustDistortion() {
     }
     else if(segmentedCloud->points[i].x>=0 && segmentedCloud->points[i].y<0){
       ori2 = -atan2(segmentedCloud->points[i].y, segmentedCloud->points[i].x);
-      ori2 += 2 * M_PI;
+      if(ori2>=1.5707963267948966)
+        ori2 = M_PI / 2.;
+      else if(ori2<1.5707963267948966 && ori2>1)
+        ori2 = -atan2(segmentedCloud->points[i].y, segmentedCloud->points[i].x);
+      else
+        ori2 += 2 * M_PI;
     }
 
     if(fabs(ori-ori2)>0.01){
-      ori2 = M_PI / 2;
       RCLCPP_INFO(this->get_logger(), "%.2f, %.2f, %.2f, %.2f", segmentedCloud->points[i].x, segmentedCloud->points[i].y, ori, ori2);
     }
-    
+    */
 
-    float relTime = (ori2 - segInfo.start_orientation) / segInfo.orientation_diff;
+    float relTime = (ori - segInfo.start_orientation) / segInfo.orientation_diff;
     if(_scan_period<=0.0){
       //keep original time
     }
@@ -1545,6 +1550,7 @@ void FeatureAssociation::runFeatureAssociation() {
   integrateTransformation();
 
   if(odom_type_=="laser_odometry"){
+    wheelOdometry.header.stamp = cloudHeader.stamp;
     assignMappingOdometry(transformLaserOdometrySum);
   }
   else{
